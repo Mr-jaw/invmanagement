@@ -152,6 +152,9 @@ export const Contacts: React.FC = () => {
 
   const handleContactClick = (contact: Contact) => {
     console.log('Contact clicked:', contact.name); // Debug log
+    console.log('Opening modal for contact:', contact.id); // Additional debug
+    
+    // Set modal data and show modal
     setModalMessage(contact);
     setShowMessageModal(true);
     
@@ -425,9 +428,9 @@ export const Contacts: React.FC = () => {
 
         <div className="space-y-3">
           {filteredAndSortedContacts.map((contact) => (
-            <Card
+            <div
               key={contact.id}
-              className={`p-6 cursor-pointer transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:shadow-lg hover:scale-[1.01] ${
+              className={`p-6 cursor-pointer transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:shadow-lg hover:scale-[1.01] bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg ${
                 contact.read ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-blue-500'
               }`}
               onClick={() => handleContactClick(contact)}
@@ -489,7 +492,7 @@ export const Contacts: React.FC = () => {
                   </Button>
                 </div>
               </div>
-            </Card>
+            </div>
           ))}
         </div>
 
@@ -510,6 +513,7 @@ export const Contacts: React.FC = () => {
       <MessageDetailsModal
         isOpen={showMessageModal}
         onClose={() => {
+          console.log('Closing modal'); // Debug log
           setShowMessageModal(false);
           setModalMessage(null);
         }}

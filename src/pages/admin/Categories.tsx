@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Search, Edit, Trash2, Tag, Image, Package, ArrowLeft } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Tag, Image, Package } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { CategoryProductsModal } from '../../components/admin/CategoryProductsModal';
 
 interface Category {
   id: string;
@@ -15,16 +16,6 @@ interface Category {
   product_count?: number;
 }
 
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  images: string[];
-  stock_quantity?: number;
-  created_at: string;
-}
-
 interface CategoryFormData {
   name: string;
   description: string;
@@ -33,13 +24,12 @@ interface CategoryFormData {
 
 export const Categories: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [productsLoading, setProductsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [formData, setFormData] = useState<CategoryFormData>({
     name: '',
     description: '',
@@ -79,28 +69,10 @@ export const Categories: React.FC = () => {
     }
   };
 
-  const fetchCategoryProducts = async (categoryId: string) => {
-    setProductsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, description, price, images, stock_quantity, created_at')
-        .eq('category_id', categoryId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setCategoryProducts(data || []);
-    } catch (error) {
-      console.error('Error fetching category products:', error);
-      setCategoryProducts([]);
-    } finally {
-      setProductsLoading(false);
-    }
-  };
-
   const handleCategoryClick = (category: Category) => {
+    console.log('Category clicked:', category.name); // Debug log
     setSelectedCategory(category);
-    fetchCategoryProducts(category.id);
+    setShowCategoryModal(true);
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -160,12 +132,6 @@ export const Categories: React.FC = () => {
 
       if (error) throw error;
       setCategories(categories.filter(c => c.id !== id));
-      
-      // If this was the selected category, clear the selection
-      if (selectedCategory?.id === id) {
-        setSelectedCategory(null);
-        setCategoryProducts([]);
-      }
     } catch (error: any) {
       alert('Failed to delete category: ' + error.message);
     }
@@ -194,112 +160,6 @@ export const Categories: React.FC = () => {
             ))}
           </div>
         </div>
-      </div>
-    );
-  }
-
-  // If a category is selected, show its products
-  if (selectedCategory) {
-    return (
-      <div className="p-6">
-        <div className="mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setSelectedCategory(null);
-              setCategoryProducts([]);
-            }}
-            icon={ArrowLeft}
-            className="mb-4"
-          >
-            Back to Categories
-          </Button>
-          <div className="flex items-center space-x-4">
-            {selectedCategory.image_url && (
-              <img
-                src={selectedCategory.image_url}
-                alt={selectedCategory.name}
-                className="w-16 h-16 rounded-lg object-cover"
-              />
-            )}
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                {selectedCategory.name}
-              </h1>
-              <p className="text-gray-600 dark:text-gray-300">
-                {selectedCategory.description}
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {categoryProducts.length} products in this category
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {productsLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
-                  <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4"></div>
-                  <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
-                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : categoryProducts.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {categoryProducts.map((product, index) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Card hover className="p-6 h-full">
-                  <img
-                    src={product.images[0] || 'https://images.pexels.com/photos/3945667/pexels-photo-3945667.jpeg'}
-                    alt={product.name}
-                    className="w-full h-48 object-cover rounded-lg mb-4"
-                  />
-                  <div className="space-y-3">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {product.name}
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2">
-                      {product.description}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xl font-bold text-primary-600 dark:text-primary-400">
-                        ${product.price}
-                      </span>
-                      {product.stock_quantity !== undefined && (
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          Stock: {product.stock_quantity}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      Added: {new Date(product.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <Package className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              No products in this category
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              Products assigned to this category will appear here.
-            </p>
-          </div>
-        )}
       </div>
     );
   }
@@ -345,7 +205,7 @@ export const Categories: React.FC = () => {
           >
             <Card 
               hover 
-              className="p-6 h-full cursor-pointer"
+              className="p-6 h-full cursor-pointer group transition-all duration-200 hover:scale-[1.02] hover:shadow-xl"
               onClick={() => handleCategoryClick(category)}
             >
               <div className="aspect-w-16 aspect-h-9 mb-4">
@@ -353,10 +213,10 @@ export const Categories: React.FC = () => {
                   <img
                     src={category.image_url}
                     alt={category.name}
-                    className="w-full h-32 object-cover rounded-lg"
+                    className="w-full h-32 object-cover rounded-lg group-hover:scale-105 transition-transform duration-200"
                   />
                 ) : (
-                  <div className="w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                  <div className="w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center group-hover:bg-gray-200 dark:group-hover:bg-gray-600 transition-colors">
                     <Image className="h-8 w-8 text-gray-400" />
                   </div>
                 )}
@@ -364,15 +224,16 @@ export const Categories: React.FC = () => {
               
               <div className="space-y-3">
                 <div className="flex items-start justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
                     {category.name}
                   </h3>
-                  <div className="flex items-center space-x-1" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={(e) => handleEdit(category, e)}
                       icon={Edit}
+                      className="hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
                     >
                       <span className="sr-only">Edit</span>
                     </Button>
@@ -381,7 +242,7 @@ export const Categories: React.FC = () => {
                       size="sm"
                       onClick={(e) => handleDelete(category.id, e)}
                       icon={Trash2}
-                      className="text-red-600 hover:text-red-700"
+                      className="hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 hover:text-red-700"
                     >
                       <span className="sr-only">Delete</span>
                     </Button>
@@ -393,7 +254,8 @@ export const Categories: React.FC = () => {
                 </p>
                 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-primary-600 dark:text-primary-400 font-medium">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/20 dark:text-primary-400">
+                    <Package className="h-3 w-3 mr-1" />
                     {category.product_count} products
                   </span>
                   <span className="text-gray-500 dark:text-gray-400">
@@ -490,6 +352,16 @@ export const Categories: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Category Products Modal */}
+      <CategoryProductsModal
+        isOpen={showCategoryModal}
+        onClose={() => {
+          setShowCategoryModal(false);
+          setSelectedCategory(null);
+        }}
+        category={selectedCategory}
+      />
     </div>
   );
 };

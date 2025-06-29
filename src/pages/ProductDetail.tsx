@@ -18,33 +18,14 @@ import {
   Download,
   Mail
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { InquiryModal } from '../components/ui/InquiryModal';
 import { generateProductBrochure } from '../lib/pdfGenerator';
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  images: string[];
-  specifications: Record<string, any>;
-  category_id: string;
-  categories?: { name: string };
-}
-
-interface Review {
-  id: string;
-  author_name: string;
-  author_email: string;
-  rating: number;
-  comment: string;
-  verified: boolean;
-  created_at: string;
-}
+import { useCachedProductDetail, useCachedProductReviews } from '../hooks/useCache';
+import { cache, CACHE_KEYS, CACHE_TTL } from '../lib/cache';
+import { supabase } from '../lib/supabase';
 
 interface ReviewFormData {
   author_name: string;
@@ -62,10 +43,11 @@ const CONTACT_CONFIG = {
 
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [product, setProduct] = useState<Product | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: product, loading: productLoading, error: productError } = useCachedProductDetail(id || '');
+  const { data: reviews, loading: reviewsLoading, refetch: refetchReviews } = useCachedProductReviews(id || '');
+  
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showInquiryModal, setShowInquiryModal] = useState(false);
@@ -80,55 +62,39 @@ export const ProductDetail: React.FC = () => {
   const [reviewSuccess, setReviewSuccess] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      fetchProductData();
+    if (product?.category_id) {
+      fetchRelatedProducts(product.category_id);
     }
-  }, [id]);
+  }, [product?.category_id, id]);
 
-  const fetchProductData = async () => {
-    if (!id) return;
+  const fetchRelatedProducts = async (categoryId: string) => {
+    const cacheKey = CACHE_KEYS.RELATED_PRODUCTS(categoryId);
+    
+    // Check cache first
+    const cachedData = cache.get(cacheKey);
+    if (cachedData) {
+      setRelatedProducts(cachedData.filter((p: any) => p.id !== id));
+      return;
+    }
 
+    setRelatedLoading(true);
     try {
-      // Fetch product details
-      const { data: productData, error: productError } = await supabase
+      const { data, error } = await supabase
         .from('products')
-        .select(`
-          *,
-          categories (name)
-        `)
-        .eq('id', id)
-        .single();
-
-      if (productError) throw productError;
-      setProduct(productData);
-
-      // Fetch ONLY verified reviews for display on the website
-      const { data: reviewsData, error: reviewsError } = await supabase
-        .from('reviews')
         .select('*')
-        .eq('product_id', id)
-        .eq('verified', true) // Only show verified reviews
-        .order('created_at', { ascending: false });
+        .eq('category_id', categoryId)
+        .neq('id', id || '')
+        .limit(4);
 
-      if (reviewsError) throw reviewsError;
-      setReviews(reviewsData || []);
-
-      // Fetch related products
-      if (productData.category_id) {
-        const { data: relatedData, error: relatedError } = await supabase
-          .from('products')
-          .select('*')
-          .eq('category_id', productData.category_id)
-          .neq('id', id)
-          .limit(4);
-
-        if (relatedError) throw relatedError;
-        setRelatedProducts(relatedData || []);
-      }
+      if (error) throw error;
+      
+      // Cache the result
+      cache.set(cacheKey, data || [], CACHE_TTL.MEDIUM);
+      setRelatedProducts(data || []);
     } catch (error) {
-      console.error('Error fetching product data:', error);
+      console.error('Error fetching related products:', error);
     } finally {
-      setLoading(false);
+      setRelatedLoading(false);
     }
   };
 
@@ -157,6 +123,9 @@ export const ProductDetail: React.FC = () => {
         comment: ''
       });
       setShowReviewForm(false);
+      
+      // Invalidate reviews cache to show updated count
+      cache.delete(CACHE_KEYS.PRODUCT_REVIEWS(id));
       
       // Note: We don't refresh reviews here since unverified reviews won't show
     } catch (error) {
@@ -245,9 +214,11 @@ export const ProductDetail: React.FC = () => {
     ));
   };
 
-  const averageRating = reviews.length > 0 
+  const averageRating = reviews && reviews.length > 0 
     ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
     : 0;
+
+  const loading = productLoading || reviewsLoading;
 
   if (loading) {
     return (
@@ -280,7 +251,7 @@ export const ProductDetail: React.FC = () => {
     );
   }
 
-  if (!product) {
+  if (productError || !product) {
     return (
       <div className="min-h-screen pt-20 bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -395,7 +366,7 @@ export const ProductDetail: React.FC = () => {
                 <div className="flex items-center space-x-1">
                   {renderStars(Math.round(averageRating))}
                   <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">
-                    ({reviews.length} verified reviews)
+                    ({reviews?.length || 0} verified reviews)
                   </span>
                 </div>
               </div>
@@ -539,7 +510,7 @@ export const ProductDetail: React.FC = () => {
                   </span>
                 </div>
                 <span className="text-gray-600 dark:text-gray-400">
-                  Based on {reviews.length} verified reviews
+                  Based on {reviews?.length || 0} verified reviews
                 </span>
               </div>
             </div>
@@ -644,7 +615,7 @@ export const ProductDetail: React.FC = () => {
 
           {/* Reviews List - Only verified reviews are shown */}
           <div className="space-y-6">
-            {reviews.map((review, index) => (
+            {reviews?.map((review, index) => (
               <motion.div
                 key={review.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -682,10 +653,10 @@ export const ProductDetail: React.FC = () => {
                   </div>
                 </Card>
               </motion.div>
-            ))}
+            )) || []}
           </div>
 
-          {reviews.length === 0 && (
+          {(!reviews || reviews.length === 0) && (
             <Card className="p-12 text-center">
               <Star className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">

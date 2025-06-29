@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { Header } from './components/layout/Header';
@@ -30,6 +30,8 @@ function App() {
             {/* Admin Routes */}
             <Route path="/admin/login" element={<Login />} />
             <Route path="/admin/*" element={<AdminLayout />}>
+              {/* Default admin route redirects to dashboard */}
+              <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="products" element={<AdminProducts />} />
               <Route path="products/new" element={<ProductForm />} />

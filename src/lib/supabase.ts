@@ -22,6 +22,7 @@ const optimizedFetch = async (url: RequestInfo | URL, options?: RequestInit) => 
         ...options?.headers,
         'Cache-Control': 'max-age=300', // 5 minute cache
         'Connection': 'keep-alive',
+        'apikey': supabaseAnonKey, // Add the required API key header
       }
     });
     

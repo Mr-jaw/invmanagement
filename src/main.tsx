@@ -1,9 +1,9 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
-import { PerformanceMonitor } from './components/monitoring/PerformanceMonitor.tsx';
+import { PerformanceMonitor as PerformanceMonitorComponent } from './components/monitoring/PerformanceMonitor.tsx';
 import { initializeDropdowns } from './lib/dropdownUtils.ts';
-import { addResourceHints, registerServiceWorker, initWebVitals } from './utils/performance.ts';
+import { addResourceHints, registerServiceWorker, initWebVitals, PerformanceMonitor } from './utils/performance.ts';
 import './index.css';
 
 // Initialize performance optimizations
@@ -21,7 +21,7 @@ monitor.startTiming('app-initialization');
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
-    <PerformanceMonitor />
+    <PerformanceMonitorComponent />
   </StrictMode>
 );
 

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card } from '../ui/Card';
+import { LazyImage } from '../ui/LazyImage';
 
 interface Product {
   id: string;
@@ -19,7 +20,7 @@ interface ProductCardProps {
   viewMode?: 'grid' | 'list';
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({ 
+export const ProductCard: React.FC<ProductCardProps> = React.memo(({ 
   product, 
   index = 0, 
   viewMode = 'grid' 
@@ -46,8 +47,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <Card hover className={viewMode === 'list' ? 'flex p-6' : 'p-6 h-full group cursor-pointer'}>
           <div className={viewMode === 'list' ? 'flex-shrink-0 w-48 mr-6' : 'mb-4'}>
             <div className="relative overflow-hidden rounded-lg">
-              <img
-                src={product.images[0]}
+              <LazyImage
+                src={product.images[0] || 'https://images.pexels.com/photos/3945667/pexels-photo-3945667.jpeg'}
                 alt={product.name}
                 className={`object-cover transition-transform duration-300 group-hover:scale-105 ${
                   viewMode === 'list' ? 'w-full h-32' : 'w-full aspect-square'
@@ -82,4 +83,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       </Link>
     </motion.div>
   );
-};
+});
+
+ProductCard.displayName = 'ProductCard';

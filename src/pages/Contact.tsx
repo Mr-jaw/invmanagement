@@ -143,7 +143,7 @@ export const Contact: React.FC = () => {
             ))}
           </div>
 
-          {/* Contact Form */}
+          {/* Contact Form and Map */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -217,12 +217,32 @@ export const Contact: React.FC = () => {
               viewport={{ once: true }}
               className="relative"
             >
-              <img
-                src="https://images.pexels.com/photos/3184306/pexels-photo-3184306.jpeg"
-                alt="Contact us"
-                className="rounded-2xl shadow-2xl w-full"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl"></div>
+              <div className="w-full h-96 rounded-2xl overflow-hidden shadow-2xl">
+                <iframe
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3022.9663095343008!2d-74.00425878459418!3d40.74844097932681!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c259a9b3117469%3A0xd134e199a405a163!2sEmpire%20State%20Building!5e0!3m2!1sen!2sus!4v1640995200000!5m2!1sen!2sus"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="LuxeShowcase Office Location"
+                  className="rounded-2xl"
+                />
+              </div>
+              <div className="absolute top-4 left-4 bg-white dark:bg-gray-800 rounded-lg p-3 shadow-lg">
+                <div className="flex items-center space-x-2">
+                  <MapPin className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      LuxeShowcase HQ
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-300">
+                      New York, NY
+                    </p>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           </div>
         </div>

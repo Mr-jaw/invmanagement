@@ -150,13 +150,8 @@ export const Contacts: React.FC = () => {
     }
   };
 
-  const handleContactClick = (contact: Contact, e: React.MouseEvent) => {
-    // Prevent modal opening if clicking on interactive elements
-    const target = e.target as HTMLElement;
-    if (target.closest('button') || target.closest('input')) {
-      return;
-    }
-
+  const handleContactClick = (contact: Contact) => {
+    console.log('Contact clicked:', contact.name); // Debug log
     setModalMessage(contact);
     setShowMessageModal(true);
     
@@ -435,7 +430,7 @@ export const Contacts: React.FC = () => {
               className={`p-6 cursor-pointer transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:shadow-lg hover:scale-[1.01] ${
                 contact.read ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-blue-500'
               }`}
-              onClick={(e) => handleContactClick(contact, e)}
+              onClick={() => handleContactClick(contact)}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center space-x-3 flex-1">

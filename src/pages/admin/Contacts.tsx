@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Search, Eye, Trash2, Clock, CheckCircle, MessageSquare, CheckSquare, Square, Filter, X } from 'lucide-react';
+import { Mail, Search, Eye, Trash2, Clock, CheckCircle, MessageSquare, CheckSquare, Square, Filter, X, User, Calendar, Phone, MapPin, Tag, Reply, Archive, Flag } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
@@ -165,10 +165,9 @@ export const Contacts: React.FC = () => {
   };
 
   const handleContactClick = (contact: Contact) => {
-    setModalMessage(contact);
-    setShowMessageModal(true);
+    setSelectedContact(contact);
     
-    // Auto-mark as read when opening modal
+    // Auto-mark as read when selecting a message
     if (!contact.read) {
       markAsRead(contact.id);
     }
@@ -274,6 +273,30 @@ export const Contacts: React.FC = () => {
     } finally {
       setBulkActionLoading(false);
     }
+  };
+
+  const handleReplyViaEmail = (contact: Contact) => {
+    const subject = `Re: ${contact.subject}`;
+    const body = `Hi ${contact.name},\n\nThank you for contacting us regarding "${contact.subject}".\n\n\n\nBest regards,\nLuxeShowcase Team`;
+    const mailtoUrl = `mailto:${contact.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    
+    window.location.href = mailtoUrl;
+  };
+
+  const getMessageCategory = (subject: string, message: string) => {
+    const lowerSubject = subject.toLowerCase();
+    const lowerMessage = message.toLowerCase();
+    
+    if (lowerSubject.includes('product') || lowerMessage.includes('product')) {
+      return { category: 'Product Inquiry', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' };
+    } else if (lowerSubject.includes('support') || lowerMessage.includes('help')) {
+      return { category: 'Support Request', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' };
+    } else if (lowerSubject.includes('complaint') || lowerMessage.includes('issue')) {
+      return { category: 'Complaint', color: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400' };
+    } else if (lowerSubject.includes('feedback') || lowerMessage.includes('suggestion')) {
+      return { category: 'Feedback', color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' };
+    }
+    return { category: 'General Inquiry', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' };
   };
 
   const filteredContacts = contacts.filter(contact => {
@@ -526,106 +549,158 @@ export const Contacts: React.FC = () => {
           )}
         </div>
 
-        {/* Message Detail */}
+        {/* Enhanced Message Detail */}
         <div className="lg:col-span-2">
           {selectedContact ? (
             <Card className="p-6">
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <div className="flex items-center space-x-3 mb-2">
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      {selectedContact.subject}
-                    </h2>
+              <div className="space-y-6">
+                {/* Header with Contact Info */}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start space-x-4">
+                    <div className="w-12 h-12 bg-gradient-to-r from-primary-600 to-luxury-600 rounded-full flex items-center justify-center">
+                      <User className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                        {selectedContact.name}
+                      </h2>
+                      <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
+                        <div className="flex items-center space-x-2">
+                          <Mail className="h-4 w-4" />
+                          <span>{selectedContact.email}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="h-4 w-4" />
+                          <span>Received: {new Date(selectedContact.created_at).toLocaleString()}</span>
+                        </div>
+                        {selectedContact.read && selectedContact.read_at && (
+                          <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
+                            <CheckCircle className="h-4 w-4" />
+                            <span>Read: {new Date(selectedContact.read_at).toLocaleString()}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
                     {selectedContact.read ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                        <CheckCircle className="h-3 w-3 mr-1" />
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                        <CheckCircle className="h-4 w-4 mr-1" />
                         Read
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
-                        <Mail className="h-3 w-3 mr-1" />
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+                        <Mail className="h-4 w-4 mr-1" />
                         Unread
                       </span>
                     )}
                   </div>
-                  
-                  <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
-                    <p><span className="font-medium">From:</span> {selectedContact.name}</p>
-                    <p><span className="font-medium">Email:</span> {selectedContact.email}</p>
-                    <p className="flex items-center">
-                      <Clock className="h-4 w-4 mr-1" />
-                      <span className="font-medium">Received:</span> {new Date(selectedContact.created_at).toLocaleString()}
-                    </p>
-                    {selectedContact.read && selectedContact.read_at && (
-                      <p className="flex items-center text-green-600 dark:text-green-400">
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        <span className="font-medium">Read:</span> {new Date(selectedContact.read_at).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
                 </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleContactClick(selectedContact)}
-                    icon={Eye}
-                  >
-                    View Details
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => deleteContact(selectedContact.id)}
-                    loading={deletingContact === selectedContact.id}
-                    icon={Trash2}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="prose dark:prose-invert max-w-none">
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-l-4 border-l-primary-500">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Message:</h4>
-                  <p className="whitespace-pre-wrap text-gray-700 dark:text-gray-300 leading-relaxed">
-                    {selectedContact.message}
-                  </p>
-                </div>
-              </div>
 
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex space-x-3">
-                  <Button>
-                    Reply via Email
-                  </Button>
-                  {selectedContact.read ? (
+                {/* Message Category */}
+                <div className="flex items-center space-x-3">
+                  <Tag className="h-5 w-5 text-gray-400" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Category:</span>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getMessageCategory(selectedContact.subject, selectedContact.message).color}`}>
+                    {getMessageCategory(selectedContact.subject, selectedContact.message).category}
+                  </span>
+                </div>
+
+                {/* Subject */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                    Subject
+                  </h3>
+                  <Card className="p-4 bg-gray-50 dark:bg-gray-700">
+                    <p className="text-gray-900 dark:text-white font-medium">
+                      {selectedContact.subject}
+                    </p>
+                  </Card>
+                </div>
+
+                {/* Message Content */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
+                    Message Content
+                  </h3>
+                  <Card className="p-6 bg-gray-50 dark:bg-gray-700 border-l-4 border-l-primary-500">
+                    <div className="prose dark:prose-invert max-w-none">
+                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                        {selectedContact.message}
+                      </p>
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Message Metadata */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="p-4 bg-blue-50 dark:bg-blue-900/20">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      <span className="font-medium text-blue-800 dark:text-blue-200">Message Details</span>
+                    </div>
+                    <div className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
+                      <p>Message ID: {selectedContact.id.slice(0, 8)}...</p>
+                      <p>Word Count: {selectedContact.message.split(' ').length} words</p>
+                      <p>Character Count: {selectedContact.message.length} characters</p>
+                    </div>
+                  </Card>
+
+                  <Card className="p-4 bg-purple-50 dark:bg-purple-900/20">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <User className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                      <span className="font-medium text-purple-800 dark:text-purple-200">Sender Info</span>
+                    </div>
+                    <div className="space-y-1 text-sm text-purple-700 dark:text-purple-300">
+                      <p>Name: {selectedContact.name}</p>
+                      <p>Email: {selectedContact.email}</p>
+                      <p>Domain: @{selectedContact.email.split('@')[1]}</p>
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                    <div className="flex space-x-3">
+                      <Button
+                        onClick={() => handleReplyViaEmail(selectedContact)}
+                        icon={Reply}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        Reply via Email
+                      </Button>
+                      
+                      <Button
+                        onClick={() => selectedContact.read ? markAsUnread(selectedContact.id) : markAsRead(selectedContact.id)}
+                        variant="outline"
+                        icon={selectedContact.read ? Mail : CheckCircle}
+                        className={selectedContact.read ? 'border-blue-300 text-blue-600 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20' : 'border-green-300 text-green-600 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/20'}
+                      >
+                        Mark as {selectedContact.read ? 'Unread' : 'Read'}
+                      </Button>
+                    </div>
+                    
                     <Button
-                      variant="outline"
-                      onClick={() => markAsUnread(selectedContact.id)}
-                      icon={Mail}
+                      onClick={() => deleteContact(selectedContact.id)}
+                      loading={deletingContact === selectedContact.id}
+                      variant="danger"
+                      icon={Trash2}
+                      className="sm:ml-3"
                     >
-                      Mark as Unread
+                      Delete Message
                     </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      onClick={() => markAsRead(selectedContact.id)}
-                      icon={CheckCircle}
-                    >
-                      Mark as Read
-                    </Button>
-                  )}
-                  <Button
-                    variant="danger"
-                    onClick={() => deleteContact(selectedContact.id)}
-                    loading={deletingContact === selectedContact.id}
-                    icon={Trash2}
-                  >
-                    Delete Message
-                  </Button>
+                  </div>
+                  
+                  <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                    <p>
+                      {selectedContact.read 
+                        ? 'This message has been read and is visible in your read messages list.'
+                        : 'This message is unread and will appear in your unread messages list until marked as read.'
+                      }
+                    </p>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -633,10 +708,10 @@ export const Contacts: React.FC = () => {
             <Card className="p-12 text-center">
               <Mail className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                Select a message to view
+                Select a message to view details
               </h3>
               <p className="text-gray-600 dark:text-gray-300">
-                Choose a message from the list to view its details and manage its status
+                Choose a message from the list to view its complete details, sender information, and manage its status
               </p>
             </Card>
           )}

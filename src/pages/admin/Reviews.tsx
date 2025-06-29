@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Star, Search, Eye, Trash2, Check, X, Filter, CheckSquare, Square } from 'lucide-react';
+import { Star, Search, Eye, Trash2, Check, X, Filter, CheckSquare, Square, User, Calendar, Package, Shield, AlertTriangle, MessageSquare, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
@@ -17,6 +17,8 @@ interface Review {
   created_at: string;
   products?: {
     name: string;
+    price: number;
+    images: string[];
   };
 }
 
@@ -48,7 +50,9 @@ export const Reviews: React.FC = () => {
         .select(`
           *,
           products (
-            name
+            name,
+            price,
+            images
           )
         `)
         .order('created_at', { ascending: false });
@@ -103,7 +107,6 @@ export const Reviews: React.FC = () => {
 
       // Show real-time update notification
       const action = !verified ? 'verified and published' : 'unverified and unpublished';
-      // You could add a toast notification here
       console.log(`Review ${action} successfully`);
     } catch (error) {
       console.error('Error updating review:', error);
@@ -186,16 +189,40 @@ export const Reviews: React.FC = () => {
     }
   };
 
-  const renderStars = (rating: number) => {
+  const renderStars = (rating: number, size: 'sm' | 'md' | 'lg' = 'sm') => {
+    const sizeClasses = {
+      sm: 'h-4 w-4',
+      md: 'h-5 w-5',
+      lg: 'h-6 w-6'
+    };
+
     return Array.from({ length: 5 }, (_, i) => (
       <Star
         key={i}
-        size={16}
-        className={`${
+        className={`${sizeClasses[size]} ${
           i < rating ? 'text-yellow-400 fill-current' : 'text-gray-300 dark:text-gray-600'
         }`}
       />
     ));
+  };
+
+  const getReviewSentiment = (rating: number, comment: string) => {
+    const positiveWords = ['great', 'excellent', 'amazing', 'love', 'perfect', 'awesome', 'fantastic', 'wonderful'];
+    const negativeWords = ['bad', 'terrible', 'awful', 'hate', 'worst', 'horrible', 'disappointing'];
+    
+    const lowerComment = comment.toLowerCase();
+    const hasPositiveWords = positiveWords.some(word => lowerComment.includes(word));
+    const hasNegativeWords = negativeWords.some(word => lowerComment.includes(word));
+    
+    if (rating >= 4 && hasPositiveWords) {
+      return { sentiment: 'Very Positive', color: 'text-green-600 dark:text-green-400', icon: ThumbsUp };
+    } else if (rating >= 3) {
+      return { sentiment: 'Positive', color: 'text-blue-600 dark:text-blue-400', icon: ThumbsUp };
+    } else if (rating === 2 || hasNegativeWords) {
+      return { sentiment: 'Negative', color: 'text-orange-600 dark:text-orange-400', icon: ThumbsDown };
+    } else {
+      return { sentiment: 'Very Negative', color: 'text-red-600 dark:text-red-400', icon: ThumbsDown };
+    }
   };
 
   const filteredReviews = reviews.filter(review => {
@@ -473,81 +500,150 @@ export const Reviews: React.FC = () => {
           )}
         </div>
 
-        {/* Review Detail */}
+        {/* Enhanced Review Detail */}
         <div className="lg:col-span-2">
           {selectedReview ? (
             <Card className="p-6">
               <div className="space-y-6">
-                {/* Header */}
+                {/* Header with Reviewer Info */}
                 <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  <div className="flex items-start space-x-4">
+                    <div className="w-12 h-12 bg-gradient-to-r from-primary-600 to-luxury-600 rounded-full flex items-center justify-center">
+                      <User className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                         Review by {selectedReview.author_name}
                       </h2>
-                      {selectedReview.verified ? (
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                          <Check className="h-4 w-4 mr-1" />
-                          Published on Website
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
-                          <X className="h-4 w-4 mr-1" />
-                          Awaiting Verification
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
-                      <p><span className="font-medium">Email:</span> {selectedReview.author_email}</p>
-                      <p><span className="font-medium">Product:</span> {selectedReview.products?.name}</p>
-                      <p><span className="font-medium">Submitted:</span> {new Date(selectedReview.created_at).toLocaleString()}</p>
+                      <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
+                        <div className="flex items-center space-x-2">
+                          <User className="h-4 w-4" />
+                          <span>{selectedReview.author_email}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="h-4 w-4" />
+                          <span>Submitted: {new Date(selectedReview.created_at).toLocaleString()}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   
                   <div className="flex items-center space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteReview(selectedReview.id)}
-                      icon={Trash2}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      Delete
-                    </Button>
+                    {selectedReview.verified ? (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                        <Shield className="h-4 w-4 mr-1" />
+                        Published
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
+                        <AlertTriangle className="h-4 w-4 mr-1" />
+                        Awaiting Verification
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                {/* Rating */}
-                <div className="flex items-center space-x-3">
-                  <span className="text-lg font-medium text-gray-900 dark:text-white">
-                    Customer Rating:
-                  </span>
-                  <div className="flex items-center space-x-1">
-                    {renderStars(selectedReview.rating)}
+                {/* Product Information */}
+                {selectedReview.products && (
+                  <div className="flex items-center space-x-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <img
+                      src={selectedReview.products.images?.[0] || 'https://images.pexels.com/photos/3945667/pexels-photo-3945667.jpeg'}
+                      alt={selectedReview.products.name}
+                      className="w-16 h-16 object-cover rounded-lg"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <Package className="h-4 w-4 text-gray-500" />
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {selectedReview.products.name}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        Price: ${selectedReview.products.price}
+                      </p>
+                    </div>
                   </div>
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">
-                    {selectedReview.rating}/5 Stars
-                  </span>
+                )}
+
+                {/* Rating and Sentiment Analysis */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="p-4 bg-yellow-50 dark:bg-yellow-900/20">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Star className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                      <span className="font-medium text-yellow-800 dark:text-yellow-200">Customer Rating</span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-1">
+                        {renderStars(selectedReview.rating, 'lg')}
+                      </div>
+                      <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {selectedReview.rating}/5
+                      </span>
+                    </div>
+                  </Card>
+
+                  <Card className="p-4 bg-blue-50 dark:bg-blue-900/20">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      <span className="font-medium text-blue-800 dark:text-blue-200">Sentiment Analysis</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {React.createElement(getReviewSentiment(selectedReview.rating, selectedReview.comment).icon, {
+                        className: `h-5 w-5 ${getReviewSentiment(selectedReview.rating, selectedReview.comment).color}`
+                      })}
+                      <span className={`font-medium ${getReviewSentiment(selectedReview.rating, selectedReview.comment).color}`}>
+                        {getReviewSentiment(selectedReview.rating, selectedReview.comment).sentiment}
+                      </span>
+                    </div>
+                  </Card>
                 </div>
 
-                {/* Comment */}
+                {/* Review Content */}
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
                     Customer Review
                   </h3>
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-l-4 border-l-primary-500">
-                    <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-                      "{selectedReview.comment}"
-                    </p>
-                  </div>
+                  <Card className="p-6 bg-gray-50 dark:bg-gray-700 border-l-4 border-l-primary-500">
+                    <div className="prose dark:prose-invert max-w-none">
+                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed text-lg">
+                        "{selectedReview.comment}"
+                      </p>
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Review Metadata */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="p-4 bg-purple-50 dark:bg-purple-900/20">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Eye className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                      <span className="font-medium text-purple-800 dark:text-purple-200">Review Details</span>
+                    </div>
+                    <div className="space-y-1 text-sm text-purple-700 dark:text-purple-300">
+                      <p>Review ID: {selectedReview.id.slice(0, 8)}...</p>
+                      <p>Word Count: {selectedReview.comment.split(' ').length} words</p>
+                      <p>Character Count: {selectedReview.comment.length} characters</p>
+                    </div>
+                  </Card>
+
+                  <Card className="p-4 bg-green-50 dark:bg-green-900/20">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <User className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      <span className="font-medium text-green-800 dark:text-green-200">Reviewer Info</span>
+                    </div>
+                    <div className="space-y-1 text-sm text-green-700 dark:text-green-300">
+                      <p>Name: {selectedReview.author_name}</p>
+                      <p>Email: {selectedReview.author_email}</p>
+                      <p>Domain: @{selectedReview.author_email.split('@')[1]}</p>
+                    </div>
+                  </Card>
                 </div>
 
                 {/* Verification Status */}
                 {!selectedReview.verified && (
                   <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                     <div className="flex items-start space-x-3">
-                      <X className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                      <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
                       <div>
                         <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
                           Review Awaiting Your Approval
@@ -563,7 +659,7 @@ export const Reviews: React.FC = () => {
                 {selectedReview.verified && (
                   <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                     <div className="flex items-start space-x-3">
-                      <Check className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+                      <Shield className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
                       <div>
                         <h4 className="text-sm font-medium text-green-800 dark:text-green-200">
                           Review Published
@@ -577,30 +673,47 @@ export const Reviews: React.FC = () => {
                 )}
 
                 {/* Actions */}
-                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex space-x-3">
-                    <Button
-                      onClick={() => toggleVerified(selectedReview.id, selectedReview.verified)}
-                      variant={selectedReview.verified ? 'outline' : 'primary'}
-                      icon={selectedReview.verified ? X : Check}
-                      className={selectedReview.verified ? 'border-red-300 text-red-600 hover:bg-red-50' : ''}
-                    >
-                      {selectedReview.verified ? 'Unpublish Review' : 'Verify & Publish'}
-                    </Button>
+                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                    <div className="flex space-x-3">
+                      <Button
+                        onClick={() => toggleVerified(selectedReview.id, selectedReview.verified)}
+                        variant={selectedReview.verified ? 'outline' : 'primary'}
+                        icon={selectedReview.verified ? X : Check}
+                        className={selectedReview.verified ? 'border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20' : ''}
+                      >
+                        {selectedReview.verified ? 'Unpublish Review' : 'Verify & Publish'}
+                      </Button>
+                      
+                      {selectedReview.products && (
+                        <Button
+                          variant="outline"
+                          icon={Package}
+                          onClick={() => window.open(`/products/${selectedReview.product_id}`, '_blank')}
+                        >
+                          View Product
+                        </Button>
+                      )}
+                    </div>
+                    
                     <Button
                       variant="danger"
                       onClick={() => deleteReview(selectedReview.id)}
                       icon={Trash2}
+                      className="sm:ml-3"
                     >
                       Delete Review
                     </Button>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    {selectedReview.verified 
-                      ? 'Unpublishing will remove this review from the website immediately.'
-                      : 'Publishing will make this review visible to all customers on the product page.'
-                    }
-                  </p>
+                  
+                  <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                    <p>
+                      {selectedReview.verified 
+                        ? 'Unpublishing will remove this review from the website immediately and it will no longer contribute to the product rating.'
+                        : 'Publishing will make this review visible to all customers on the product page and include it in the overall rating calculation.'
+                      }
+                    </p>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -611,7 +724,7 @@ export const Reviews: React.FC = () => {
                 Select a review to manage
               </h3>
               <p className="text-gray-600 dark:text-gray-300">
-                Choose a review from the list to view details, verify for publication, or manage its status
+                Choose a review from the list to view complete details, reviewer information, sentiment analysis, and manage its publication status
               </p>
             </Card>
           )}

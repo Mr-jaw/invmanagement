@@ -69,8 +69,14 @@ export const Categories: React.FC = () => {
     }
   };
 
-  const handleCategoryClick = (category: Category) => {
+  const handleCategoryClick = (category: Category, e: React.MouseEvent) => {
+    // Prevent event bubbling from child elements
+    e.preventDefault();
+    e.stopPropagation();
+    
     console.log('Category clicked:', category.name); // Debug log
+    console.log('Opening modal for category:', category.id); // Debug log
+    
     setSelectedCategory(category);
     setShowCategoryModal(true);
   };
@@ -111,6 +117,10 @@ export const Categories: React.FC = () => {
 
   const handleEdit = (category: Category, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent category click
+    e.preventDefault();
+    
+    console.log('Edit clicked for:', category.name); // Debug log
+    
     setEditingCategory(category);
     setFormData({
       name: category.name,
@@ -122,6 +132,10 @@ export const Categories: React.FC = () => {
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent category click
+    e.preventDefault();
+    
+    console.log('Delete clicked for category:', id); // Debug log
+    
     if (!confirm('Are you sure you want to delete this category? This will remove the category from all associated products.')) return;
 
     try {
@@ -205,9 +219,33 @@ export const Categories: React.FC = () => {
           >
             <Card 
               hover 
-              className="p-6 h-full cursor-pointer group transition-all duration-200 hover:scale-[1.02] hover:shadow-xl"
-              onClick={() => handleCategoryClick(category)}
+              className="p-6 h-full cursor-pointer group transition-all duration-200 hover:scale-[1.02] hover:shadow-xl relative"
+              onClick={(e) => handleCategoryClick(category, e)}
             >
+              {/* Action Buttons - Positioned absolutely to prevent interference */}
+              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                <div className="flex items-center space-x-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => handleEdit(category, e)}
+                    icon={Edit}
+                    className="hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 h-8 w-8 p-0"
+                  >
+                    <span className="sr-only">Edit</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => handleDelete(category.id, e)}
+                    icon={Trash2}
+                    className="hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 hover:text-red-700 h-8 w-8 p-0"
+                  >
+                    <span className="sr-only">Delete</span>
+                  </Button>
+                </div>
+              </div>
+
               <div className="aspect-w-16 aspect-h-9 mb-4">
                 {category.image_url ? (
                   <img
@@ -224,29 +262,9 @@ export const Categories: React.FC = () => {
               
               <div className="space-y-3">
                 <div className="flex items-start justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors pr-16">
                     {category.name}
                   </h3>
-                  <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => handleEdit(category, e)}
-                      icon={Edit}
-                      className="hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                    >
-                      <span className="sr-only">Edit</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => handleDelete(category.id, e)}
-                      icon={Trash2}
-                      className="hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 hover:text-red-700"
-                    >
-                      <span className="sr-only">Delete</span>
-                    </Button>
-                  </div>
                 </div>
                 
                 <p className="text-gray-600 dark:text-gray-300 text-sm">
@@ -261,6 +279,11 @@ export const Categories: React.FC = () => {
                   <span className="text-gray-500 dark:text-gray-400">
                     {new Date(category.created_at).toLocaleDateString()}
                   </span>
+                </div>
+
+                {/* Click indicator */}
+                <div className="text-xs text-primary-600 dark:text-primary-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                  Click to view products →
                 </div>
               </div>
             </Card>
@@ -357,6 +380,7 @@ export const Categories: React.FC = () => {
       <CategoryProductsModal
         isOpen={showCategoryModal}
         onClose={() => {
+          console.log('Closing category modal'); // Debug log
           setShowCategoryModal(false);
           setSelectedCategory(null);
         }}

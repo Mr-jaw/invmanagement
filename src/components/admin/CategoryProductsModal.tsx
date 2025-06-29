@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Package, Search, Edit, Trash2, Plus, ArrowLeft } from 'lucide-react';
+import { X, Package, Search, Edit, Trash2, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Card } from '../ui/Card';
@@ -62,6 +62,7 @@ export const CategoryProductsModal: React.FC<CategoryProductsModalProps> = ({
   // Fetch products when category changes
   useEffect(() => {
     if (category && isOpen) {
+      console.log('Fetching products for category:', category.name); // Debug log
       fetchCategoryProducts();
     }
   }, [category, isOpen]);
@@ -71,6 +72,8 @@ export const CategoryProductsModal: React.FC<CategoryProductsModalProps> = ({
     
     setLoading(true);
     try {
+      console.log('Fetching products for category ID:', category.id); // Debug log
+      
       const { data, error } = await supabase
         .from('products')
         .select('id, name, description, price, images, stock_quantity, created_at')
@@ -78,6 +81,8 @@ export const CategoryProductsModal: React.FC<CategoryProductsModalProps> = ({
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      
+      console.log('Fetched products:', data?.length || 0); // Debug log
       setProducts(data || []);
     } catch (error) {
       console.error('Error fetching category products:', error);
@@ -89,6 +94,7 @@ export const CategoryProductsModal: React.FC<CategoryProductsModalProps> = ({
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
+      console.log('Backdrop clicked, closing modal'); // Debug log
       onClose();
     }
   };
@@ -119,11 +125,13 @@ export const CategoryProductsModal: React.FC<CategoryProductsModalProps> = ({
     product.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  console.log('Modal render - isOpen:', isOpen, 'category:', category?.name); // Debug log
+
   if (!isOpen || !category) return null;
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+      <div className="fixed inset-0 z-[60] overflow-y-auto">
         {/* Backdrop */}
         <div
           className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"

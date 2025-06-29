@@ -100,17 +100,6 @@ export class PerformanceMonitor {
   }
 }
 
-// Bundle size analyzer
-export function analyzeBundleSize(): void {
-  if (process.env.NODE_ENV === 'development') {
-    import('webpack-bundle-analyzer').then(({ BundleAnalyzerPlugin }) => {
-      console.log('Bundle analyzer available in development mode');
-    }).catch(() => {
-      console.log('Bundle analyzer not available');
-    });
-  }
-}
-
 // Critical resource hints
 export function addResourceHints(): void {
   const head = document.head;

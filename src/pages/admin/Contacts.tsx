@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Search, Eye, Trash2, Clock, CheckCircle, MessageSquare, CheckSquare, Square, Filter, X, User, Calendar, Phone, MapPin, Tag, Reply, Archive, Flag } from 'lucide-react';
+import { Mail, Search, Eye, Trash2, Clock, CheckCircle, MessageSquare, CheckSquare, Square, Filter, X, User, Calendar, Phone, MapPin, Tag, Reply, Archive, Flag, Paperclip, Globe, Shield, AlertTriangle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
@@ -288,15 +288,40 @@ export const Contacts: React.FC = () => {
     const lowerMessage = message.toLowerCase();
     
     if (lowerSubject.includes('product') || lowerMessage.includes('product')) {
-      return { category: 'Product Inquiry', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' };
+      return { category: 'Product Inquiry', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400', icon: MessageSquare };
     } else if (lowerSubject.includes('support') || lowerMessage.includes('help')) {
-      return { category: 'Support Request', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' };
+      return { category: 'Support Request', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400', icon: Shield };
     } else if (lowerSubject.includes('complaint') || lowerMessage.includes('issue')) {
-      return { category: 'Complaint', color: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400' };
+      return { category: 'Complaint', color: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400', icon: AlertTriangle };
     } else if (lowerSubject.includes('feedback') || lowerMessage.includes('suggestion')) {
-      return { category: 'Feedback', color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' };
+      return { category: 'Feedback', color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400', icon: CheckCircle };
     }
-    return { category: 'General Inquiry', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' };
+    return { category: 'General Inquiry', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', icon: Mail };
+  };
+
+  const getEmailDomain = (email: string) => {
+    const domain = email.split('@')[1];
+    const commonDomains = {
+      'gmail.com': 'Gmail',
+      'yahoo.com': 'Yahoo',
+      'outlook.com': 'Outlook',
+      'hotmail.com': 'Hotmail',
+      'icloud.com': 'iCloud',
+      'aol.com': 'AOL'
+    };
+    return commonDomains[domain as keyof typeof commonDomains] || domain;
+  };
+
+  const getPriorityLevel = (contact: Contact) => {
+    const category = getMessageCategory(contact.subject, contact.message);
+    const isRecent = new Date().getTime() - new Date(contact.created_at).getTime() < 24 * 60 * 60 * 1000; // Last 24 hours
+    
+    if (category.category === 'Complaint' || (category.category === 'Support Request' && isRecent)) {
+      return { level: 'High', color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-50 dark:bg-red-900/20' };
+    } else if (category.category === 'Product Inquiry' || isRecent) {
+      return { level: 'Medium', color: 'text-yellow-600 dark:text-yellow-400', bgColor: 'bg-yellow-50 dark:bg-yellow-900/20' };
+    }
+    return { level: 'Normal', color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-50 dark:bg-green-900/20' };
   };
 
   const filteredContacts = contacts.filter(contact => {
@@ -552,38 +577,51 @@ export const Contacts: React.FC = () => {
         {/* Enhanced Message Detail */}
         <div className="lg:col-span-2">
           {selectedContact ? (
-            <Card className="p-6">
+            <div className="rounded-xl transition-all duration-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg p-6">
               <div className="space-y-6">
-                {/* Header with Contact Info */}
-                <div className="flex items-start justify-between">
+                {/* Sender's Full Name and Contact Information */}
+                <div className="flex items-start justify-between border-b border-gray-200 dark:border-gray-700 pb-6">
                   <div className="flex items-start space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-primary-600 to-luxury-600 rounded-full flex items-center justify-center">
-                      <User className="h-6 w-6 text-white" />
+                    <div className="w-16 h-16 bg-gradient-to-r from-primary-600 to-luxury-600 rounded-full flex items-center justify-center">
+                      <User className="h-8 w-8 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
                         {selectedContact.name}
                       </h2>
-                      <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
-                        <div className="flex items-center space-x-2">
-                          <Mail className="h-4 w-4" />
-                          <span>{selectedContact.email}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4" />
-                          <span>Received: {new Date(selectedContact.created_at).toLocaleString()}</span>
-                        </div>
-                        {selectedContact.read && selectedContact.read_at && (
-                          <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
-                            <CheckCircle className="h-4 w-4" />
-                            <span>Read: {new Date(selectedContact.read_at).toLocaleString()}</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-300">
+                            <Mail className="h-4 w-4" />
+                            <span className="font-medium">Email:</span>
+                            <span>{selectedContact.email}</span>
                           </div>
-                        )}
+                          <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-300">
+                            <Globe className="h-4 w-4" />
+                            <span className="font-medium">Provider:</span>
+                            <span>{getEmailDomain(selectedContact.email)}</span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-300">
+                            <Calendar className="h-4 w-4" />
+                            <span className="font-medium">Received:</span>
+                            <span>{new Date(selectedContact.created_at).toLocaleString()}</span>
+                          </div>
+                          {selectedContact.read && selectedContact.read_at && (
+                            <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
+                              <CheckCircle className="h-4 w-4" />
+                              <span className="font-medium">Read:</span>
+                              <span>{new Date(selectedContact.read_at).toLocaleString()}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2">
+                  {/* Current Status */}
+                  <div className="flex flex-col items-end space-y-2">
                     {selectedContact.read ? (
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
                         <CheckCircle className="h-4 w-4 mr-1" />
@@ -595,117 +633,242 @@ export const Contacts: React.FC = () => {
                         Unread
                       </span>
                     )}
+                    
+                    {/* Priority Level */}
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityLevel(selectedContact).bgColor} ${getPriorityLevel(selectedContact).color}`}>
+                      Priority: {getPriorityLevel(selectedContact).level}
+                    </span>
                   </div>
                 </div>
 
-                {/* Message Category */}
-                <div className="flex items-center space-x-3">
-                  <Tag className="h-5 w-5 text-gray-400" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Category:</span>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getMessageCategory(selectedContact.subject, selectedContact.message).color}`}>
-                    {getMessageCategory(selectedContact.subject, selectedContact.message).category}
-                  </span>
+                {/* Message Category/Type */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Tag className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Message Category:</span>
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getMessageCategory(selectedContact.subject, selectedContact.message).color}`}>
+                      {React.createElement(getMessageCategory(selectedContact.subject, selectedContact.message).icon, {
+                        className: "h-4 w-4 mr-1"
+                      })}
+                      {getMessageCategory(selectedContact.subject, selectedContact.message).category}
+                    </span>
+                  </div>
+                  
+                  {/* Message Metadata */}
+                  <div className="text-right text-sm text-gray-500 dark:text-gray-400">
+                    <p>ID: {selectedContact.id.slice(0, 8)}...</p>
+                    <p>{selectedContact.message.split(' ').length} words</p>
+                  </div>
+                </div>
+
+                {/* Message Timestamp */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="p-4 bg-blue-50 dark:bg-blue-900/20">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      <span className="font-medium text-blue-800 dark:text-blue-200">Received</span>
+                    </div>
+                    <div className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
+                      <p className="font-semibold">{new Date(selectedContact.created_at).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}</p>
+                      <p>{new Date(selectedContact.created_at).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                      })}</p>
+                      <p className="text-xs">
+                        {Math.floor((new Date().getTime() - new Date(selectedContact.created_at).getTime()) / (1000 * 60 * 60 * 24))} days ago
+                      </p>
+                    </div>
+                  </Card>
+
+                  {selectedContact.read && selectedContact.read_at && (
+                    <Card className="p-4 bg-green-50 dark:bg-green-900/20">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        <span className="font-medium text-green-800 dark:text-green-200">Read</span>
+                      </div>
+                      <div className="space-y-1 text-sm text-green-700 dark:text-green-300">
+                        <p className="font-semibold">{new Date(selectedContact.read_at).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}</p>
+                        <p>{new Date(selectedContact.read_at).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit'
+                        })}</p>
+                        <p className="text-xs">
+                          {Math.floor((new Date().getTime() - new Date(selectedContact.read_at).getTime()) / (1000 * 60 * 60 * 24))} days ago
+                        </p>
+                      </div>
+                    </Card>
+                  )}
                 </div>
 
                 {/* Subject */}
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                    <MessageSquare className="h-5 w-5 mr-2" />
                     Subject
                   </h3>
-                  <Card className="p-4 bg-gray-50 dark:bg-gray-700">
-                    <p className="text-gray-900 dark:text-white font-medium">
+                  <Card className="p-4 bg-gray-50 dark:bg-gray-700 border-l-4 border-l-primary-500">
+                    <p className="text-lg font-medium text-gray-900 dark:text-white">
                       {selectedContact.subject}
                     </p>
                   </Card>
                 </div>
 
-                {/* Message Content */}
+                {/* Complete Message Content */}
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
-                    Message Content
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                    <Mail className="h-5 w-5 mr-2" />
+                    Complete Message Content
                   </h3>
                   <Card className="p-6 bg-gray-50 dark:bg-gray-700 border-l-4 border-l-primary-500">
                     <div className="prose dark:prose-invert max-w-none">
-                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed text-base">
                         {selectedContact.message}
                       </p>
                     </div>
-                  </Card>
-                </div>
-
-                {/* Message Metadata */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card className="p-4 bg-blue-50 dark:bg-blue-900/20">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                      <span className="font-medium text-blue-800 dark:text-blue-200">Message Details</span>
-                    </div>
-                    <div className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
-                      <p>Message ID: {selectedContact.id.slice(0, 8)}...</p>
-                      <p>Word Count: {selectedContact.message.split(' ').length} words</p>
-                      <p>Character Count: {selectedContact.message.length} characters</p>
-                    </div>
-                  </Card>
-
-                  <Card className="p-4 bg-purple-50 dark:bg-purple-900/20">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <User className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                      <span className="font-medium text-purple-800 dark:text-purple-200">Sender Info</span>
-                    </div>
-                    <div className="space-y-1 text-sm text-purple-700 dark:text-purple-300">
-                      <p>Name: {selectedContact.name}</p>
-                      <p>Email: {selectedContact.email}</p>
-                      <p>Domain: @{selectedContact.email.split('@')[1]}</p>
-                    </div>
-                  </Card>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-                    <div className="flex space-x-3">
-                      <Button
-                        onClick={() => handleReplyViaEmail(selectedContact)}
-                        icon={Reply}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        Reply via Email
-                      </Button>
-                      
-                      <Button
-                        onClick={() => selectedContact.read ? markAsUnread(selectedContact.id) : markAsRead(selectedContact.id)}
-                        variant="outline"
-                        icon={selectedContact.read ? Mail : CheckCircle}
-                        className={selectedContact.read ? 'border-blue-300 text-blue-600 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20' : 'border-green-300 text-green-600 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/20'}
-                      >
-                        Mark as {selectedContact.read ? 'Unread' : 'Read'}
-                      </Button>
-                    </div>
                     
-                    <Button
-                      onClick={() => deleteContact(selectedContact.id)}
-                      loading={deletingContact === selectedContact.id}
-                      variant="danger"
-                      icon={Trash2}
-                      className="sm:ml-3"
-                    >
-                      Delete Message
-                    </Button>
+                    {/* Message Statistics */}
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                      <div className="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Words</p>
+                          <p className="text-lg font-bold text-gray-900 dark:text-white">
+                            {selectedContact.message.split(' ').length}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Characters</p>
+                          <p className="text-lg font-bold text-gray-900 dark:text-white">
+                            {selectedContact.message.length}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Lines</p>
+                          <p className="text-lg font-bold text-gray-900 dark:text-white">
+                            {selectedContact.message.split('\n').length}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Attachments or Additional Metadata */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                    <Paperclip className="h-5 w-5 mr-2" />
+                    Additional Metadata
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card className="p-4 bg-purple-50 dark:bg-purple-900/20">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <User className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                        <span className="font-medium text-purple-800 dark:text-purple-200">Sender Details</span>
+                      </div>
+                      <div className="space-y-1 text-sm text-purple-700 dark:text-purple-300">
+                        <p><span className="font-medium">Full Name:</span> {selectedContact.name}</p>
+                        <p><span className="font-medium">Email:</span> {selectedContact.email}</p>
+                        <p><span className="font-medium">Domain:</span> @{selectedContact.email.split('@')[1]}</p>
+                        <p><span className="font-medium">Provider:</span> {getEmailDomain(selectedContact.email)}</p>
+                      </div>
+                    </Card>
+
+                    <Card className="p-4 bg-orange-50 dark:bg-orange-900/20">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Flag className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                        <span className="font-medium text-orange-800 dark:text-orange-200">Message Analysis</span>
+                      </div>
+                      <div className="space-y-1 text-sm text-orange-700 dark:text-orange-300">
+                        <p><span className="font-medium">Category:</span> {getMessageCategory(selectedContact.subject, selectedContact.message).category}</p>
+                        <p><span className="font-medium">Priority:</span> {getPriorityLevel(selectedContact).level}</p>
+                        <p><span className="font-medium">Status:</span> {selectedContact.read ? 'Read' : 'Unread'}</p>
+                        <p><span className="font-medium">Response Time:</span> {selectedContact.read ? 'Responded' : 'Pending'}</p>
+                      </div>
+                    </Card>
+                  </div>
+                </div>
+
+                {/* Action Buttons for Management Functions */}
+                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                    <Shield className="h-5 w-5 mr-2" />
+                    Management Actions
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Primary Actions */}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Primary Actions</h4>
+                      <div className="space-y-2">
+                        <Button
+                          onClick={() => handleReplyViaEmail(selectedContact)}
+                          icon={Reply}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          Reply via Email
+                        </Button>
+                        
+                        <Button
+                          onClick={() => selectedContact.read ? markAsUnread(selectedContact.id) : markAsRead(selectedContact.id)}
+                          variant="outline"
+                          icon={selectedContact.read ? Mail : CheckCircle}
+                          className={`w-full ${selectedContact.read ? 'border-blue-300 text-blue-600 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20' : 'border-green-300 text-green-600 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/20'}`}
+                        >
+                          Mark as {selectedContact.read ? 'Unread' : 'Read'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Secondary Actions */}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Secondary Actions</h4>
+                      <div className="space-y-2">
+                        <Button
+                          variant="outline"
+                          icon={Archive}
+                          className="w-full border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
+                        >
+                          Archive Message
+                        </Button>
+                        
+                        <Button
+                          onClick={() => deleteContact(selectedContact.id)}
+                          loading={deletingContact === selectedContact.id}
+                          variant="danger"
+                          icon={Trash2}
+                          className="w-full"
+                        >
+                          Delete Message
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                   
-                  <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                    <p>
-                      {selectedContact.read 
-                        ? 'This message has been read and is visible in your read messages list.'
-                        : 'This message is unread and will appear in your unread messages list until marked as read.'
+                  {/* Action Information */}
+                  <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      <strong>Note:</strong> {selectedContact.read 
+                        ? 'This message has been read and is visible in your read messages list. Marking as unread will move it back to the unread list.'
+                        : 'This message is unread and will appear in your unread messages list until marked as read. Replying will automatically mark it as read.'
                       }
                     </p>
                   </div>
                 </div>
               </div>
-            </Card>
+            </div>
           ) : (
-            <Card className="p-12 text-center">
+            <div className="rounded-xl transition-all duration-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg p-12 text-center">
               <Mail className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                 Select a message to view details
@@ -713,7 +876,7 @@ export const Contacts: React.FC = () => {
               <p className="text-gray-600 dark:text-gray-300">
                 Choose a message from the list to view its complete details, sender information, and manage its status
               </p>
-            </Card>
+            </div>
           )}
         </div>
       </div>

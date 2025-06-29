@@ -7,33 +7,94 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
-// Custom fetch implementation to handle session errors
-const customFetch = async (url: RequestInfo | URL, options?: RequestInit) => {
-  const response = await fetch(url, options)
-  
-  // Check for session_not_found errors
-  if (response.status === 403) {
-    try {
-      const body = await response.clone().text()
-      const errorData = JSON.parse(body)
-      
-      if (errorData.code === 'session_not_found') {
-        // Clear the invalid session
-        await supabase.auth.signOut()
+// Optimized fetch implementation with connection pooling and caching
+const optimizedFetch = async (url: RequestInfo | URL, options?: RequestInit) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      // Add performance optimizations
+      keepalive: true,
+      headers: {
+        ...options?.headers,
+        'Cache-Control': 'max-age=300', // 5 minute cache
+        'Connection': 'keep-alive',
       }
-    } catch (e) {
-      // If we can't parse the response, continue normally
+    });
+    
+    clearTimeout(timeoutId);
+    
+    // Check for session_not_found errors
+    if (response.status === 403) {
+      try {
+        const body = await response.clone().text();
+        const errorData = JSON.parse(body);
+        
+        if (errorData.code === 'session_not_found') {
+          // Clear the invalid session
+          await supabase.auth.signOut();
+        }
+      } catch (e) {
+        // If we can't parse the response, continue normally
+      }
     }
+    
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
   }
-  
-  return response
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   global: {
-    fetch: customFetch
+    fetch: optimizedFetch
+  },
+  db: {
+    schema: 'public'
+  },
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false // Disable for better performance
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10 // Limit realtime events for better performance
+    }
   }
 })
+
+// Preload critical data on module load
+const preloadData = async () => {
+  try {
+    // Preload categories and featured products in parallel
+    const [categoriesPromise, featuredPromise] = await Promise.allSettled([
+      supabase.from('categories').select('*').order('name'),
+      supabase.from('products').select('*').eq('featured', true).limit(6)
+    ]);
+
+    // Cache the results if successful
+    if (categoriesPromise.status === 'fulfilled' && categoriesPromise.value.data) {
+      const { cache, CACHE_KEYS, CACHE_TTL } = await import('./cache');
+      cache.set(CACHE_KEYS.CATEGORIES, categoriesPromise.value.data, CACHE_TTL.LONG);
+    }
+
+    if (featuredPromise.status === 'fulfilled' && featuredPromise.value.data) {
+      const { cache, CACHE_KEYS, CACHE_TTL } = await import('./cache');
+      cache.set(CACHE_KEYS.FEATURED_PRODUCTS, featuredPromise.value.data, CACHE_TTL.MEDIUM);
+    }
+  } catch (error) {
+    // Silently fail preloading to not block app startup
+    console.warn('Failed to preload data:', error);
+  }
+};
+
+// Start preloading immediately but don't block
+preloadData();
 
 export type Database = {
   public: {

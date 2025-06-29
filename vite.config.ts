@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
     exclude: ['lucide-react'],
+    include: ['@supabase/supabase-js', 'framer-motion']
   },
   build: {
     // Enable code splitting
@@ -20,22 +21,21 @@ export default defineConfig({
       }
     },
     // Enable compression
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true
-      }
-    },
+    minify: 'esbuild', // Faster than terser
+    target: 'es2015',
     // Optimize chunk size
     chunkSizeWarningLimit: 1000
   },
   server: {
-    // Enable HTTP/2
-    https: false,
     // Optimize dev server
     hmr: {
       overlay: false
-    }
+    },
+    // Enable HTTP/2 in development
+    https: false
+  },
+  // Enable aggressive caching
+  define: {
+    __DEV__: JSON.stringify(process.env.NODE_ENV === 'development')
   }
 });

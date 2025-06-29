@@ -1,4 +1,4 @@
-// Cache utility for frontend and admin data
+// Enhanced cache utility with aggressive caching and performance optimizations
 interface CacheItem<T> {
   data: T;
   timestamp: number;
@@ -7,7 +7,8 @@ interface CacheItem<T> {
 
 class CacheManager {
   private cache = new Map<string, CacheItem<any>>();
-  private defaultTTL = 5 * 60 * 1000; // 5 minutes default
+  private defaultTTL = 10 * 60 * 1000; // 10 minutes default (increased from 5)
+  private memoryCache = new Map<string, any>(); // In-memory cache for immediate access
 
   set<T>(key: string, data: T, ttl?: number): void {
     const expiry = Date.now() + (ttl || this.defaultTTL);
@@ -16,52 +17,105 @@ class CacheManager {
       timestamp: Date.now(),
       expiry
     });
+    
+    // Also store in memory cache for immediate access
+    this.memoryCache.set(key, data);
+    
+    // Store in localStorage for persistence across sessions
+    try {
+      localStorage.setItem(`cache_${key}`, JSON.stringify({
+        data,
+        timestamp: Date.now(),
+        expiry
+      }));
+    } catch (e) {
+      // Ignore localStorage errors
+    }
   }
 
   get<T>(key: string): T | null {
+    // Check memory cache first (fastest)
+    if (this.memoryCache.has(key)) {
+      const item = this.cache.get(key);
+      if (item && Date.now() <= item.expiry) {
+        return this.memoryCache.get(key);
+      }
+    }
+
+    // Check in-memory cache
     const item = this.cache.get(key);
-    
-    if (!item) {
-      return null;
+    if (item && Date.now() <= item.expiry) {
+      this.memoryCache.set(key, item.data);
+      return item.data;
     }
 
-    if (Date.now() > item.expiry) {
-      this.cache.delete(key);
-      return null;
+    // Check localStorage cache
+    try {
+      const stored = localStorage.getItem(`cache_${key}`);
+      if (stored) {
+        const parsedItem = JSON.parse(stored);
+        if (Date.now() <= parsedItem.expiry) {
+          this.cache.set(key, parsedItem);
+          this.memoryCache.set(key, parsedItem.data);
+          return parsedItem.data;
+        } else {
+          localStorage.removeItem(`cache_${key}`);
+        }
+      }
+    } catch (e) {
+      // Ignore localStorage errors
     }
 
-    return item.data;
+    return null;
   }
 
   has(key: string): boolean {
-    const item = this.cache.get(key);
-    
-    if (!item) {
-      return false;
-    }
-
-    if (Date.now() > item.expiry) {
-      this.cache.delete(key);
-      return false;
-    }
-
-    return true;
+    return this.get(key) !== null;
   }
 
   delete(key: string): void {
     this.cache.delete(key);
+    this.memoryCache.delete(key);
+    try {
+      localStorage.removeItem(`cache_${key}`);
+    } catch (e) {
+      // Ignore localStorage errors
+    }
   }
 
   clear(): void {
     this.cache.clear();
+    this.memoryCache.clear();
+    try {
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('cache_')) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (e) {
+      // Ignore localStorage errors
+    }
   }
 
-  // Clear expired items
+  // Preload data in background
+  async preload<T>(key: string, fetcher: () => Promise<T>, ttl?: number): Promise<void> {
+    if (!this.has(key)) {
+      try {
+        const data = await fetcher();
+        this.set(key, data, ttl);
+      } catch (error) {
+        console.warn(`Failed to preload ${key}:`, error);
+      }
+    }
+  }
+
+  // Cleanup expired items
   cleanup(): void {
     const now = Date.now();
     for (const [key, item] of this.cache.entries()) {
       if (now > item.expiry) {
-        this.cache.delete(key);
+        this.delete(key);
       }
     }
   }
@@ -70,6 +124,7 @@ class CacheManager {
   getStats() {
     return {
       size: this.cache.size,
+      memorySize: this.memoryCache.size,
       keys: Array.from(this.cache.keys()),
       totalMemory: JSON.stringify(Array.from(this.cache.entries())).length
     };
@@ -103,18 +158,18 @@ export const CACHE_KEYS = {
   CATEGORY_PRODUCTS: (categoryId: string) => `category_products_${categoryId}`,
 } as const;
 
-// Cache TTL configurations (in milliseconds)
+// Cache TTL configurations (in milliseconds) - More aggressive caching
 export const CACHE_TTL = {
-  SHORT: 2 * 60 * 1000,      // 2 minutes
-  MEDIUM: 5 * 60 * 1000,     // 5 minutes
-  LONG: 15 * 60 * 1000,      // 15 minutes
-  VERY_LONG: 60 * 60 * 1000, // 1 hour
+  SHORT: 5 * 60 * 1000,      // 5 minutes (increased from 2)
+  MEDIUM: 15 * 60 * 1000,    // 15 minutes (increased from 5)
+  LONG: 30 * 60 * 1000,      // 30 minutes (increased from 15)
+  VERY_LONG: 2 * 60 * 60 * 1000, // 2 hours (increased from 1)
 } as const;
 
-// Auto cleanup every 10 minutes
+// Auto cleanup every 5 minutes (more frequent)
 setInterval(() => {
   cache.cleanup();
-}, 10 * 60 * 1000);
+}, 5 * 60 * 1000);
 
 // Clear cache when user logs out
 export const clearUserCache = () => {
@@ -172,4 +227,25 @@ export const invalidateCache = {
   all: () => {
     cache.clear();
   }
+};
+
+// Background data preloader
+export const preloadCriticalData = async () => {
+  // Preload essential data in background
+  const preloadTasks = [
+    cache.preload(CACHE_KEYS.CATEGORIES, async () => {
+      const { supabase } = await import('./supabase');
+      const { data } = await supabase.from('categories').select('*').order('name');
+      return data || [];
+    }, CACHE_TTL.LONG),
+    
+    cache.preload(CACHE_KEYS.FEATURED_PRODUCTS, async () => {
+      const { supabase } = await import('./supabase');
+      const { data } = await supabase.from('products').select('*').eq('featured', true).limit(6);
+      return data || [];
+    }, CACHE_TTL.MEDIUM),
+  ];
+
+  // Don't wait for preload to complete, run in background
+  Promise.allSettled(preloadTasks);
 };

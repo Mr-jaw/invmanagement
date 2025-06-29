@@ -6,6 +6,7 @@ interface UseCacheOptions<T> {
   fetcher: () => Promise<T>;
   ttl?: number;
   enabled?: boolean;
+  immediate?: boolean; // Load immediately without waiting
 }
 
 interface UseCacheReturn<T> {
@@ -20,7 +21,8 @@ export function useCache<T>({
   key,
   fetcher,
   ttl = CACHE_TTL.MEDIUM,
-  enabled = true
+  enabled = true,
+  immediate = true
 }: UseCacheOptions<T>): UseCacheReturn<T> {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,7 +35,6 @@ export function useCache<T>({
     }
 
     try {
-      setLoading(true);
       setError(null);
 
       // Check cache first
@@ -42,6 +43,11 @@ export function useCache<T>({
         setData(cachedData);
         setLoading(false);
         return;
+      }
+
+      // If immediate is false and we have no cached data, show loading
+      if (!immediate && !cachedData) {
+        setLoading(true);
       }
 
       // Fetch fresh data
@@ -56,11 +62,12 @@ export function useCache<T>({
     } finally {
       setLoading(false);
     }
-  }, [key, fetcher, ttl, enabled]);
+  }, [key, fetcher, ttl, enabled, immediate]);
 
   const refetch = useCallback(async () => {
     // Clear cache and fetch fresh data
     cache.delete(key);
+    setLoading(true);
     await fetchData();
   }, [key, fetchData]);
 
@@ -70,6 +77,15 @@ export function useCache<T>({
   }, [key]);
 
   useEffect(() => {
+    // Check cache immediately on mount
+    const cachedData = cache.get<T>(key);
+    if (cachedData) {
+      setData(cachedData);
+      setLoading(false);
+      return;
+    }
+
+    // If no cached data, fetch it
     fetchData();
   }, [fetchData]);
 
@@ -82,7 +98,7 @@ export function useCache<T>({
   };
 }
 
-// Specialized hooks for common use cases
+// Specialized hooks for common use cases with optimized caching
 export function useCachedProducts() {
   return useCache({
     key: 'products',
@@ -96,7 +112,8 @@ export function useCachedProducts() {
       if (error) throw error;
       return data || [];
     },
-    ttl: CACHE_TTL.MEDIUM
+    ttl: CACHE_TTL.MEDIUM,
+    immediate: true
   });
 }
 
@@ -113,7 +130,8 @@ export function useCachedCategories() {
       if (error) throw error;
       return data || [];
     },
-    ttl: CACHE_TTL.LONG
+    ttl: CACHE_TTL.LONG,
+    immediate: true
   });
 }
 
@@ -131,7 +149,8 @@ export function useCachedFeaturedProducts() {
       if (error) throw error;
       return data || [];
     },
-    ttl: CACHE_TTL.MEDIUM
+    ttl: CACHE_TTL.MEDIUM,
+    immediate: true
   });
 }
 
@@ -153,7 +172,8 @@ export function useCachedProductDetail(id: string) {
       return data;
     },
     ttl: CACHE_TTL.MEDIUM,
-    enabled: !!id
+    enabled: !!id,
+    immediate: true
   });
 }
 
@@ -173,6 +193,7 @@ export function useCachedProductReviews(productId: string) {
       return data || [];
     },
     ttl: CACHE_TTL.SHORT,
-    enabled: !!productId
+    enabled: !!productId,
+    immediate: true
   });
 }

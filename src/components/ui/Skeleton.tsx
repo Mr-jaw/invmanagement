@@ -41,17 +41,17 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   );
 };
 
-// Pre-built skeleton components for common use cases
-export const ProductCardSkeleton: React.FC = () => (
+// Optimized pre-built skeleton components for common use cases
+export const ProductCardSkeleton: React.FC = React.memo(() => (
   <div className="bg-white dark:bg-gray-800 rounded-xl p-6 animate-pulse">
     <Skeleton variant="rectangular" className="h-48 mb-4" />
     <Skeleton variant="text" className="h-6 mb-2" />
     <Skeleton variant="text" className="h-4 mb-4 w-3/4" />
     <Skeleton variant="text" className="h-8 w-24" />
   </div>
-);
+));
 
-export const CategoryCardSkeleton: React.FC = () => (
+export const CategoryCardSkeleton: React.FC = React.memo(() => (
   <div className="bg-white dark:bg-gray-800 rounded-xl p-6 animate-pulse">
     <Skeleton variant="rectangular" className="h-32 mb-4" />
     <Skeleton variant="text" className="h-6 mb-2" />
@@ -61,9 +61,9 @@ export const CategoryCardSkeleton: React.FC = () => (
       <Skeleton variant="text" className="h-4 w-16" />
     </div>
   </div>
-);
+));
 
-export const ReviewCardSkeleton: React.FC = () => (
+export const ReviewCardSkeleton: React.FC = React.memo(() => (
   <div className="bg-white dark:bg-gray-800 rounded-xl p-6 animate-pulse">
     <div className="flex items-start space-x-4">
       <Skeleton variant="circular" className="w-12 h-12" />
@@ -75,4 +75,20 @@ export const ReviewCardSkeleton: React.FC = () => (
       </div>
     </div>
   </div>
-);
+));
+
+// Fast loading skeleton for immediate display
+export const FastLoadingSkeleton: React.FC = React.memo(() => (
+  <div className="animate-pulse space-y-4">
+    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+    <div className="space-y-2">
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+    </div>
+  </div>
+));
+
+ProductCardSkeleton.displayName = 'ProductCardSkeleton';
+CategoryCardSkeleton.displayName = 'CategoryCardSkeleton';
+ReviewCardSkeleton.displayName = 'ReviewCardSkeleton';
+FastLoadingSkeleton.displayName = 'FastLoadingSkeleton';

@@ -4,6 +4,7 @@ import { Search, Grid, List, Filter } from 'lucide-react';
 import { ProductCard } from '../components/products/ProductCard';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
+import { ProductCardSkeleton } from '../components/ui/Skeleton';
 import { useCachedProducts, useCachedCategories } from '../hooks/useCache';
 
 export const Products: React.FC = () => {
@@ -26,18 +27,18 @@ export const Products: React.FC = () => {
     return (
       <div className="min-h-screen pt-20 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-64 mb-8"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-6">
-                  <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4"></div>
-                  <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
-                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
-                </div>
-              ))}
-            </div>
+          <div className="mb-8">
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              Our Products
+            </h1>
+            <p className="text-lg text-gray-600 dark:text-gray-300">
+              Discover our complete collection of premium products
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[...Array(6)].map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
           </div>
         </div>
       </div>

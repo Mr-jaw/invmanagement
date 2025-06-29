@@ -150,7 +150,13 @@ export const Contacts: React.FC = () => {
     }
   };
 
-  const handleContactClick = (contact: Contact) => {
+  const handleContactClick = (contact: Contact, e: React.MouseEvent) => {
+    // Prevent modal opening if clicking on interactive elements
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('input')) {
+      return;
+    }
+
     setModalMessage(contact);
     setShowMessageModal(true);
     
@@ -174,7 +180,8 @@ export const Contacts: React.FC = () => {
     setModalMessage(null);
   };
 
-  const handleSelectContact = (contactId: string) => {
+  const handleSelectContact = (contactId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click when selecting
     setSelectedContacts(prev => 
       prev.includes(contactId) 
         ? prev.filter(id => id !== contactId)
@@ -425,19 +432,16 @@ export const Contacts: React.FC = () => {
           {filteredAndSortedContacts.map((contact) => (
             <Card
               key={contact.id}
-              className={`p-6 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 ${
+              className={`p-6 cursor-pointer transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:shadow-lg hover:scale-[1.01] ${
                 contact.read ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-blue-500'
               }`}
-              onClick={() => handleContactClick(contact)}
+              onClick={(e) => handleContactClick(contact, e)}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center space-x-3 flex-1">
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSelectContact(contact.id);
-                    }}
-                    className="flex-shrink-0"
+                    onClick={(e) => handleSelectContact(contact.id, e)}
+                    className="flex-shrink-0 p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
                   >
                     {selectedContacts.includes(contact.id) ? (
                       <CheckSquare className="h-5 w-5 text-primary-600" />
@@ -453,7 +457,7 @@ export const Contacts: React.FC = () => {
                       {contact.read ? (
                         <CheckCircle className="w-5 h-5 text-green-500" />
                       ) : (
-                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
                       )}
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
@@ -484,7 +488,7 @@ export const Contacts: React.FC = () => {
                     onClick={(e) => deleteContact(contact.id, e)}
                     loading={deletingContact === contact.id}
                     icon={Trash2}
-                    className="text-red-600 hover:text-red-700"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
                   >
                     <span className="sr-only">Delete message</span>
                   </Button>

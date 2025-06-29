@@ -14,7 +14,8 @@ import {
   X,
   BarChart3,
   Tag,
-  Warehouse
+  Warehouse,
+  ExternalLink
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -50,6 +51,11 @@ export const AdminLayout: React.FC = () => {
     } catch (error) {
       console.error('Error signing out:', error);
     }
+  };
+
+  const handleViewSite = () => {
+    // Open the main site in a new tab
+    window.open('/', '_blank');
   };
 
   return (
@@ -99,7 +105,7 @@ export const AdminLayout: React.FC = () => {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gradient-to-r from-primary-600 to-luxury-600 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-medium">
@@ -125,6 +131,17 @@ export const AdminLayout: React.FC = () => {
               <span className="sr-only">Sign out</span>
             </Button>
           </div>
+          
+          {/* View Site Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleViewSite}
+            icon={ExternalLink}
+            className="w-full text-primary-600 dark:text-primary-400 border-primary-300 dark:border-primary-700 hover:bg-primary-50 dark:hover:bg-primary-900/20"
+          >
+            View Live Site
+          </Button>
         </div>
       </div>
 
@@ -141,9 +158,15 @@ export const AdminLayout: React.FC = () => {
             >
               <span className="sr-only">Open sidebar</span>
             </Button>
-            <Link to="/" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleViewSite}
+              icon={ExternalLink}
+              className="text-primary-600 dark:text-primary-400"
+            >
               View Site
-            </Link>
+            </Button>
           </div>
         </div>
 

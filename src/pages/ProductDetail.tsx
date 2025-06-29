@@ -53,6 +53,13 @@ interface ReviewFormData {
   comment: string;
 }
 
+// Configuration for contact information
+const CONTACT_CONFIG = {
+  phone: '+1 (555) 123-4567',
+  whatsapp: '15551234567', // WhatsApp number (without + or spaces)
+  email: 'hello@luxeshowcase.com'
+};
+
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
@@ -160,13 +167,22 @@ export const ProductDetail: React.FC = () => {
   };
 
   const handleWhatsAppContact = () => {
-    const message = `Hi! I'm interested in ${product?.name}. Could you please provide more information?`;
-    const whatsappUrl = `https://wa.me/15551234567?text=${encodeURIComponent(message)}`;
+    if (!product) return;
+    
+    const message = `Hi! I'm interested in ${product.name}. Could you please provide more information?`;
+    const whatsappUrl = `https://wa.me/${CONTACT_CONFIG.whatsapp}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
 
   const handleCallNow = () => {
-    window.location.href = 'tel:+15551234567';
+    // Create a more user-friendly call experience
+    if (navigator.userAgent.match(/iPhone|iPad|iPod|Android/i)) {
+      // Mobile device - direct call
+      window.location.href = `tel:${CONTACT_CONFIG.phone}`;
+    } else {
+      // Desktop - show call information
+      alert(`Call us at: ${CONTACT_CONFIG.phone}\n\nOur business hours:\nMonday - Friday: 9:00 AM - 6:00 PM EST\nSaturday: 10:00 AM - 4:00 PM EST\nSunday: Closed`);
+    }
   };
 
   const handleCopyLink = async () => {
@@ -175,20 +191,43 @@ export const ProductDetail: React.FC = () => {
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     } catch (error) {
-      console.error('Failed to copy link:', error);
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = window.location.href;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
     }
   };
 
   const handleDownloadBrochure = () => {
     if (!product) return;
     
-    generateProductBrochure({
-      name: product.name,
-      description: product.description,
-      price: product.price,
-      specifications: product.specifications || {},
-      images: product.images
-    });
+    try {
+      generateProductBrochure({
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        specifications: product.specifications || {},
+        images: product.images
+      });
+    } catch (error) {
+      console.error('Error generating brochure:', error);
+      alert('Sorry, there was an error generating the brochure. Please try again later.');
+    }
+  };
+
+  const handleEmailInquiry = () => {
+    if (!product) return;
+    
+    const subject = `Inquiry about ${product.name}`;
+    const body = `Hi,\n\nI'm interested in learning more about ${product.name} (Price: $${product.price}).\n\nCould you please provide additional information about:\n- Availability\n- Shipping options\n- Warranty details\n- Any current promotions\n\nThank you!\n\nBest regards`;
+    
+    const mailtoUrl = `mailto:${CONTACT_CONFIG.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
   };
 
   const renderStars = (rating: number, interactive = false, onRatingChange?: (rating: number) => void) => {
@@ -396,7 +435,7 @@ export const ProductDetail: React.FC = () => {
                   onClick={handleCopyLink}
                   icon={Copy}
                   variant="outline"
-                  className={copySuccess ? 'bg-green-50 border-green-300 text-green-700' : ''}
+                  className={copySuccess ? 'bg-green-50 border-green-300 text-green-700 dark:bg-green-900/20 dark:border-green-700 dark:text-green-400' : ''}
                 >
                   {copySuccess ? 'Copied!' : 'Copy Link'}
                 </Button>
@@ -413,6 +452,18 @@ export const ProductDetail: React.FC = () => {
                   variant="secondary"
                 >
                   Inquire Now
+                </Button>
+              </div>
+
+              {/* Email Direct Contact */}
+              <div className="pt-2">
+                <Button 
+                  onClick={handleEmailInquiry}
+                  icon={Mail}
+                  variant="ghost"
+                  className="w-full text-primary-600 dark:text-primary-400"
+                >
+                  Send Direct Email to {CONTACT_CONFIG.email}
                 </Button>
               </div>
             </div>

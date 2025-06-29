@@ -41,6 +41,9 @@ const CONTACT_CONFIG = {
   email: 'hello@luxeshowcase.com'
 };
 
+// Default placeholder image
+const DEFAULT_IMAGE = 'https://images.pexels.com/photos/3965545/pexels-photo-3965545.jpeg?auto=compress&cs=tinysrgb&w=800';
+
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { data: product, loading: productLoading, error: productError } = useCachedProductDetail(id || '');
@@ -60,6 +63,16 @@ export const ProductDetail: React.FC = () => {
   });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewSuccess, setReviewSuccess] = useState(false);
+
+  // Safe image access helper
+  const getProductImages = () => {
+    if (!product?.images || !Array.isArray(product.images) || product.images.length === 0) {
+      return [DEFAULT_IMAGE];
+    }
+    return product.images;
+  };
+
+  const productImages = getProductImages();
 
   useEffect(() => {
     if (product?.category_id) {
@@ -181,7 +194,7 @@ export const ProductDetail: React.FC = () => {
         description: product.description,
         price: product.price,
         specifications: product.specifications || {},
-        images: product.images
+        images: productImages
       });
     } catch (error) {
       console.error('Error generating brochure:', error);
@@ -300,17 +313,17 @@ export const ProductDetail: React.FC = () => {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3 }}
-                  src={product.images[currentImageIndex] || product.images[0]}
+                  src={productImages[currentImageIndex] || productImages[0]}
                   alt={product.name}
                   className="w-full h-full object-cover"
                 />
               </AnimatePresence>
               
-              {product.images.length > 1 && (
+              {productImages.length > 1 && (
                 <>
                   <button
                     onClick={() => setCurrentImageIndex(prev => 
-                      prev === 0 ? product.images.length - 1 : prev - 1
+                      prev === 0 ? productImages.length - 1 : prev - 1
                     )}
                     className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full p-2 shadow-lg hover:bg-white dark:hover:bg-gray-800 transition-colors"
                   >
@@ -318,7 +331,7 @@ export const ProductDetail: React.FC = () => {
                   </button>
                   <button
                     onClick={() => setCurrentImageIndex(prev => 
-                      prev === product.images.length - 1 ? 0 : prev + 1
+                      prev === productImages.length - 1 ? 0 : prev + 1
                     )}
                     className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full p-2 shadow-lg hover:bg-white dark:hover:bg-gray-800 transition-colors"
                   >
@@ -329,9 +342,9 @@ export const ProductDetail: React.FC = () => {
             </div>
 
             {/* Thumbnail Images */}
-            {product.images.length > 1 && (
+            {productImages.length > 1 && (
               <div className="flex space-x-2 overflow-x-auto">
-                {product.images.map((image, index) => (
+                {productImages.map((image, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentImageIndex(index)}
@@ -693,7 +706,7 @@ export const ProductDetail: React.FC = () => {
                   <Link to={`/products/${relatedProduct.id}`}>
                     <Card hover className="p-4 h-full">
                       <img
-                        src={relatedProduct.images[0]}
+                        src={relatedProduct.images?.[0] || DEFAULT_IMAGE}
                         alt={relatedProduct.name}
                         className="w-full aspect-square object-cover rounded-lg mb-3"
                       />

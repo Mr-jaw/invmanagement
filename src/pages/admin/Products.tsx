@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Search, Edit, Trash2, Star, Eye } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Star, Eye, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { exportToPDF, exportToCSV, exportProductsData } from '../../lib/exportUtils';
 
 interface Product {
   id: string;
@@ -15,6 +16,7 @@ interface Product {
   images: string[];
   featured: boolean;
   created_at: string;
+  stock_quantity?: number;
   categories?: { name: string };
 }
 
@@ -86,6 +88,15 @@ export const Products: React.FC = () => {
     }
   };
 
+  const handleExport = (format: 'pdf' | 'csv') => {
+    const exportData = exportProductsData(filteredProducts);
+    if (format === 'pdf') {
+      exportToPDF(exportData);
+    } else {
+      exportToCSV(exportData);
+    }
+  };
+
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.description.toLowerCase().includes(searchTerm.toLowerCase())
@@ -117,11 +128,41 @@ export const Products: React.FC = () => {
             Manage your product catalog
           </p>
         </div>
-        <Link to="/admin/products/new">
-          <Button icon={Plus}>
-            Add Product
-          </Button>
-        </Link>
+        <div className="flex items-center space-x-3">
+          <div className="relative">
+            <Button 
+              variant="outline" 
+              icon={Download}
+              onClick={() => {
+                const dropdown = document.getElementById('products-export-dropdown');
+                dropdown?.classList.toggle('hidden');
+              }}
+            >
+              Export
+            </Button>
+            <div id="products-export-dropdown" className="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 border border-gray-200 dark:border-gray-700">
+              <div className="py-1">
+                <button
+                  onClick={() => handleExport('pdf')}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  Export as PDF
+                </button>
+                <button
+                  onClick={() => handleExport('csv')}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  Export as CSV
+                </button>
+              </div>
+            </div>
+          </div>
+          <Link to="/admin/products/new">
+            <Button icon={Plus}>
+              Add Product
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="mb-6">
@@ -168,6 +209,11 @@ export const Products: React.FC = () => {
                     <span>
                       {product.categories?.name || 'Uncategorized'}
                     </span>
+                    {product.stock_quantity !== undefined && (
+                      <span>
+                        Stock: {product.stock_quantity}
+                      </span>
+                    )}
                     <span>
                       {new Date(product.created_at).toLocaleDateString()}
                     </span>

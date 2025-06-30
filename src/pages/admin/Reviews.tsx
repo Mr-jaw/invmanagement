@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Star, Search, Trash2, Check, X, CheckSquare, Square } from 'lucide-react';
+import { Star, Search, Trash2, Check, X, CheckSquare, Square, Download } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { ReviewDetailsModal } from '../../components/admin/ReviewDetailsModal';
+import { exportToPDF, exportToCSV, exportReviewsData } from '../../lib/exportUtils';
 
 interface Review {
   id: string;
@@ -175,6 +176,15 @@ export const Reviews: React.FC = () => {
     }
   };
 
+  const handleExport = (format: 'pdf' | 'csv') => {
+    const exportData = exportReviewsData(filteredReviews);
+    if (format === 'pdf') {
+      exportToPDF(exportData);
+    } else {
+      exportToCSV(exportData);
+    }
+  };
+
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
@@ -224,12 +234,44 @@ export const Reviews: React.FC = () => {
   return (
     <div className="p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Product Reviews Management
-        </h1>
-        <p className="text-gray-600 dark:text-gray-300">
-          Manage customer reviews and control what appears on your website
-        </p>
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              Product Reviews Management
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300">
+              Manage customer reviews and control what appears on your website
+            </p>
+          </div>
+          <div className="relative">
+            <Button 
+              variant="outline" 
+              icon={Download}
+              onClick={() => {
+                const dropdown = document.getElementById('reviews-export-dropdown');
+                dropdown?.classList.toggle('hidden');
+              }}
+            >
+              Export
+            </Button>
+            <div id="reviews-export-dropdown" className="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 border border-gray-200 dark:border-gray-700">
+              <div className="py-1">
+                <button
+                  onClick={() => handleExport('pdf')}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  Export as PDF
+                </button>
+                <button
+                  onClick={() => handleExport('csv')}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  Export as CSV
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
         {pendingReviews.length > 0 && (
           <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
             <div className="flex items-start space-x-3">

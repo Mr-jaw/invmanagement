@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Search, Edit, Trash2, Tag, Image, Package } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Tag, Image, Package, Download } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { CategoryProductsModal } from '../../components/admin/CategoryProductsModal';
+import { exportToPDF, exportToCSV, exportCategoriesData } from '../../lib/exportUtils';
 
 interface Category {
   id: string;
@@ -151,6 +152,15 @@ export const Categories: React.FC = () => {
     }
   };
 
+  const handleExport = (format: 'pdf' | 'csv') => {
+    const exportData = exportCategoriesData(filteredCategories);
+    if (format === 'pdf') {
+      exportToPDF(exportData);
+    } else {
+      exportToCSV(exportData);
+    }
+  };
+
   const resetForm = () => {
     setFormData({ name: '', description: '', image_url: '' });
     setEditingCategory(null);
@@ -189,12 +199,42 @@ export const Categories: React.FC = () => {
             Organize your products into categories. Click on a category to view its products.
           </p>
         </div>
-        <Button
-          onClick={() => setShowForm(true)}
-          icon={Plus}
-        >
-          Add Category
-        </Button>
+        <div className="flex items-center space-x-3">
+          <div className="relative">
+            <Button 
+              variant="outline" 
+              icon={Download}
+              onClick={() => {
+                const dropdown = document.getElementById('categories-export-dropdown');
+                dropdown?.classList.toggle('hidden');
+              }}
+            >
+              Export
+            </Button>
+            <div id="categories-export-dropdown" className="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 border border-gray-200 dark:border-gray-700">
+              <div className="py-1">
+                <button
+                  onClick={() => handleExport('pdf')}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  Export as PDF
+                </button>
+                <button
+                  onClick={() => handleExport('csv')}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  Export as CSV
+                </button>
+              </div>
+            </div>
+          </div>
+          <Button
+            onClick={() => setShowForm(true)}
+            icon={Plus}
+          >
+            Add Category
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
